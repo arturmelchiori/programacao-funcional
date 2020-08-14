@@ -1,3 +1,7 @@
+-- TEC IX - Programação Funcional - André Du Bois
+-- Trabalho 01 - Minesweeper
+-- Artur Melchiori Cerri
+
 module Main where
 
 -- Aqui estou importando algumas funções para transformar de inteiros para caracteres
@@ -51,13 +55,18 @@ mBoard = [[False, False, False, False, False, False, False, False, False],
 -- gArr (get array): recebe uma posicao (p) e uma lista (vetor) e devolve o elemento
 -- na posição p do vetor
 
---gArr :: Int -> [t] -> t
+gArr :: Int -> [t] -> t
+gArr p (x:xs)
+    | (p == 1) = x
+    | otherwise = gArr (p-1) xs
 
 -- uArr (update array): recebe uma posição (p), um novo valor (v), e uma lista (vetor) e devolve um
 -- novo vetor com o valor v na posição p 
 
--- uArr :: Int -> a -> [a] -> [a]
-
+uArr :: Int -> a -> [a] -> [a]
+uArr p v (x:xs)
+    | (p == 1) = v : xs
+    | otherwise = x : uArr (p-1) v xs
 
 -- Uma matriz, nada mais é do que um vetor de vetores. 
 -- Dessa forma, usando as operações anteriores, podemos criar funções para acessar os tabuleiros, como 
@@ -66,13 +75,16 @@ mBoard = [[False, False, False, False, False, False, False, False, False],
 -- gPos (get position) recebe linha (l), coluna (c) (não precisa validar) e um tabuleiro. Devolve o elemento na posicao
 -- tabuleiro[l,c]. Usar gArr na implementação
 
---gPos :: Int -> Int -> [[a]] -> a
+gPos :: Int -> Int -> [[a]] -> a
+gPos l c b = gArr c (gArr l b)
 
 -- uPos (update position): recebe um novo valor, uma posição no tabuleiro (linha e coluna) e um tabuleiro. Devolve 
 -- o tabuleiro modificado com o novo valor na posiçao lxc
 
-
---uPos :: Int -> Int ->  a -> [[a]] -> [[a]]
+-- Obs (Artur).: Na definição anterior, está enunciado na ordem valor, linha e coluna enquanto na assinatura da função
+-- está como linha, coluna e valor, então fiz de acordo com a assinatura
+uPos :: Int -> Int -> a -> [[a]] -> [[a]]
+uPos l c v b = uArr l (uArr c v (gArr l b)) b
 
 --------------- SEGUNDA PARTE: LÓGICA DO JOGO
 
