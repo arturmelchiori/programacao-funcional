@@ -90,13 +90,14 @@ uPos l c v b = uArr l (uArr c v (gArr l b)) b
 
 -- isMine: recebe linha coluna e o tabuleiro de minas, e diz se a posição contém uma mina
 
--- isMine :: Int -> Int -> MBoard -> Bool
-
+isMine :: Int -> Int -> MBoard -> Bool
+isMine l c b = (gPos l c b) == True
 
 -- isValidPos: recebe o tamanho do tabuleiro (ex, em um tabuleiro 9x9, o tamanho é 9), 
 -- uma linha e uma coluna, e diz se essa posição é válida no tabuleiro
 
---isValidPos :: Int -> Int -> Int -> Bool
+isValidPos :: Int -> Int -> Int -> Bool
+isValidPos t l c = (l <= t && l >= 0) && (c <= t && c >= 0)
 
 -- 
 -- validMoves: Dado o tamanho do tabuleiro e uma posição atual (linha e coluna), retorna uma lista
@@ -115,9 +116,19 @@ uPos l c v b = uArr l (uArr c v (gArr l b)) b
 --  (1,0)  (1,1) ...
 --   ...    ...  ..
 
---- validMoves :: Int -> Int -> Int -> [(Int,Int)]
+-- Função nada elegante mas funciona
+genSurrounding :: Int -> Int -> [(Int, Int)]
+genSurrounding l c = (l-1, c-1) : (l-1, c) : (l-1, c+1) : (l, c-1) : (l, c+1) : (l+1, c-1) : (l+1, c) : [(l+1, c+1)]
 
-
+validMoves :: Int -> Int -> Int -> [(Int,Int)]
+validMoves t l c = validate t (genSurrounding l c)
+        where
+            validate :: Int -> [(Int, Int)] -> [(Int, Int)]
+            validate t [] = []
+            validate t ((a,b):xs)
+                | ((isValidPos t a b) == True) = [(a, b)] ++ validate t xs
+                | otherwise = validate t xs
+            
 -- cMinas: recebe uma posicao  (linha e coluna), o tabuleiro com o mapa das minas, e conta quantas minas
 -- existem nas posições adjacentes
 
