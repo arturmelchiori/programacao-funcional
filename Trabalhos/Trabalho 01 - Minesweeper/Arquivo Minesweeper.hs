@@ -88,7 +88,7 @@ uPos l c v b = uArr l (uArr c v (gArr l b)) b
 
 isMine :: Int -> Int -> MBoard -> Bool
 isMine l c b = (gPos l c b) == True
-
+ 
 -- isValidPos: recebe o tamanho do tabuleiro (ex, em um tabuleiro 9x9, o tamanho é 9), 
 -- uma linha e uma coluna, e diz se essa posição é válida no tabuleiro
 
