@@ -38,7 +38,7 @@ mBoard = [[False, False, False, False, False, False, False, False, False],
           [False, False, False, False, False, False, False, False, False],
           [False, False, False, False, False, False, False, False, False],
           [False, False, False, False, False, False, False, False, False],
-          [False, False, False, False, True , False, False, False, False],
+          [False, False, False, False, True, False, False, False, False],
           [False, False, False, False, False, True, False, False, False],
           [False, False, False, False, False, False, False, False, False],
           [False, False, False, False, False, False, False, False, False],
@@ -56,16 +56,14 @@ mBoard = [[False, False, False, False, False, False, False, False, False],
 -- na posição p do vetor
 
 gArr :: Int -> [t] -> t
-gArr p (x:xs)
-    | (p == 1) = x
-    | otherwise = gArr (p-1) xs
+gArr p x = x !! p
 
 -- uArr (update array): recebe uma posição (p), um novo valor (v), e uma lista (vetor) e devolve um
 -- novo vetor com o valor v na posição p 
 
 uArr :: Int -> a -> [a] -> [a]
 uArr p v (x:xs)
-    | (p == 1) = v : xs
+    | (p == 0) = v : xs
     | otherwise = x : uArr (p-1) v xs
 
 -- Uma matriz, nada mais é do que um vetor de vetores. 
@@ -97,7 +95,7 @@ isMine l c b = (gPos l c b) == True
 -- uma linha e uma coluna, e diz se essa posição é válida no tabuleiro
 
 isValidPos :: Int -> Int -> Int -> Bool
-isValidPos t l c = (l <= t && l >= 0) && (c <= t && c >= 0)
+isValidPos t l c = (l < t && l >= 0) && (c < t && c >= 0)
 
 -- 
 -- validMoves: Dado o tamanho do tabuleiro e uma posição atual (linha e coluna), retorna uma lista
@@ -116,24 +114,38 @@ isValidPos t l c = (l <= t && l >= 0) && (c <= t && c >= 0)
 --  (1,0)  (1,1) ...
 --   ...    ...  ..
 
--- Função nada elegante mas funciona
-genSurrounding :: Int -> Int -> [(Int, Int)]
-genSurrounding l c = (l-1, c-1) : (l-1, c) : (l-1, c+1) : (l, c-1) : (l, c+1) : (l+1, c-1) : (l+1, c) : [(l+1, c+1)]
-
 validMoves :: Int -> Int -> Int -> [(Int,Int)]
-validMoves t l c = validate t (genSurrounding l c)
-        where
-            validate :: Int -> [(Int, Int)] -> [(Int, Int)]
-            validate t [] = []
-            validate t ((a,b):xs)
-                | ((isValidPos t a b) == True) = [(a, b)] ++ validate t xs
-                | otherwise = validate t xs
+validMoves t l c
+    | (isValidPos t l c == False) = error "Posição Inválida"
+    | otherwise = validate t (genSurr l c)
+    
+    where
+        -- Função nada elegante mas funciona
+        genSurr :: Int -> Int -> [(Int, Int)]
+        genSurr l c = [(l-1, c-1), (l-1, c), (l-1, c+1), (l, c-1), (l, c+1), (l+1, c-1), (l+1, c), (l+1, c+1)]
+        validate :: Int -> [(Int, Int)] -> [(Int, Int)]
+        validate t [] = []
+        validate t ((a,b):xs)
+            | (isValidPos t a b == True) = (a, b) : validate t xs
+            | otherwise = validate t xs
             
 -- cMinas: recebe uma posicao  (linha e coluna), o tabuleiro com o mapa das minas, e conta quantas minas
 -- existem nas posições adjacentes
 
--- cMinas :: Int -> Int -> MBoard -> Int
+size :: [t] -> Int
+size [] = 0
+size (x:xs) = 1 + size xs 
 
+cMinas :: Int -> Int -> MBoard -> Int
+cMinas l c b = count b (validMoves (size b)  l c)
+    
+    where
+        count ::  MBoard -> [(Int, Int)] -> Int
+        count b [] = 0 
+        count b ((x,y):xs)
+            | isMine x y b = 1 + count b xs
+            | otherwise = count b xs
+            
 ---
 --- abreJogada: é a função principal do jogo!!
 --- recebe uma posição a ser aberta (linha e coluna), o mapa de minas e o tabuleiro do jogo. Devolve como
@@ -148,7 +160,17 @@ validMoves t l c = validate t (genSurrounding l c)
 --- - Se a posição a ser aberta não possui minas adjacentes, abrimos ela com zero (0) e recursivamente abrimos
 --- as outras posições adjacentes a ela
 
--- abreJogada :: Int -> Int -> MBoard -> GBoard -> GBoard
+abreJogada :: Int -> Int -> MBoard -> GBoard -> GBoard
+abreJogada l c mBoard gBoard
+    | (isMine l c mBoard == True) = gBoard
+    | (gPos l c gBoard /= '-') = gBoard
+    | (cMinas l c mBoard > 0) = uPos l c (intToDigit (cMinas l c mBoard)) gBoard
+    | otherwise = abreJogadaNext (validMoves (size mBoard) l c) mBoard (uPos l c (intToDigit 0) gBoard)
+    
+    where
+        abreJogadaNext :: [(Int, Int)] -> MBoard -> GBoard -> GBoard
+        abreJogadaNext [] mBoard gBoard = gBoard
+        abreJogadaNext ((l, c): xs) mBoard gBoard = abreJogadaNext xs mBoard (abreJogada l c mBoard gBoard)
 
 
 --- abreTabuleiro: recebe o mapa de Minas e o tabuleiro do jogo, e abre todo o tabuleiro do jogo, mostrando
@@ -157,8 +179,7 @@ validMoves t l c = validate t (genSurrounding l c)
 
 -- abreTabuleiro :: MBoard -> GBoard -> GBoard
 
-
---  -- contaFechadas: Recebe um GBoard e conta quantas posições fechadas existem no tabuleiro (posições com '-')
+-- contaFechadas: Recebe um GBoard e conta quantas posições fechadas existem no tabuleiro (posições com '-')
 
 -- contaFechadas :: GBoard -> Int
 
@@ -178,24 +199,31 @@ validMoves t l c = validate t (genSurrounding l c)
 -- printBoard: Recebe o tabuleiro do jogo e devolve uma string que é a representação visual desse tabuleiro
 -- Usar como referncia de implementacao o video sobre tabela de vendas (Aula 06)
 
+printBoard :: GBoard -> String
+printBoard [] = []
+printBoard (x:xs) = show x ++ "\n" ++ printBoard xs
 
--- printBoard :: GBoard -> String
-
+printBoard2 :: MBoard -> String
+printBoard2 [] = []
+printBoard2 (x:xs) = show x ++ "\n" ++ printBoard2 xs
 
 -- geraLista: recebe um inteiro n, um valor v, e gera uma lista contendo n vezes o valor v
 
--- geraLista :: Int -> a -> [a]
+geraLista :: Int -> a -> [a]
+geraLista 0 v = []
+geraLista n v = v : geraLista (n-1) v
 
 -- geraTabuleiro: recebe o tamanho do tabuleiro e gera um tabuleiro  novo, todo fechado (todas as posições
 -- contém '-'). A função geraLista deve ser usada na implementação
 
--- geraNovoTabuleiro :: Int -> GBoard
+geraNovoTabuleiro :: Int -> GBoard
+geraNovoTabuleiro t = geraLista t (geraLista t '-')
 
 -- geraMapaDeMinasZerado: recebe o tamanho do tabuleiro e gera um mapa de minas zerado, com todas as posições
 -- contendo False. Usar geraLista na implementação
 
--- geraMapaDeMinasZerado :: Int -> MBoard
-
+geraMapaDeMinasZerado :: Int -> MBoard
+geraMapaDeMinasZerado t = geraLista t (geraLista t (False))
 
 -- A função a seguir (main) deve ser substituida pela função main comentada mais
 -- abaixo quando o jogo estiver pronto
