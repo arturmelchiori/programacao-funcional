@@ -45,8 +45,6 @@ mBoard = [[False, False, False, False, False, False, False, False, False],
           [False, False, False, False, False, False, False, False, False]]
 
 
-
-
 -- PRIMEIRA PARTE - FUNÇÕES PARA MANIPULAR OS TABULEIROS DO JOGO (MATRIZES)
 
 -- A ideia das próximas funções é permitir que a gente acesse uma lista usando um indice,
@@ -175,22 +173,49 @@ abreJogada l c mBoard gBoard
 
 --- abreTabuleiro: recebe o mapa de Minas e o tabuleiro do jogo, e abre todo o tabuleiro do jogo, mostrando
 --- onde estão as minas e os números nas posições adjecentes às minas. Essa função é usada para mostrar
---- todo o tabuleiro no caso de vitória ou derrota
+--- todo o tabuleiro no caso de vitória ou derrota 
 
--- abreTabuleiro :: MBoard -> GBoard -> GBoard
+abreTabuleiro :: MBoard -> GBoard -> GBoard
+abreTabuleiro mBoard gBoard = abreJogada ((\(a,b) -> a) ((\(x:xs) -> x) (genAllCoord 0 0 mBoard))) ((\(a,b) -> b) ((\(x:xs) -> x) (genAllCoord 0 0 mBoard))) mBoard gBoard
+    where
+        genAllCoord :: Int -> Int -> [[t]] -> [(Int,Int)]
+        genAllCoord i c board
+            | i < size board = genArrayCoord i c board ++ genAllCoord (i+1) c board
+            | otherwise = []
+        genArrayCoord :: Int -> Int -> [[t]] -> [(Int,Int)]
+        genArrayCoord row i board
+            | i < size board = (row, i) : (genArrayCoord row (i + 1) board)
+            | otherwise = []
 
 -- contaFechadas: Recebe um GBoard e conta quantas posições fechadas existem no tabuleiro (posições com '-')
 
--- contaFechadas :: GBoard -> Int
+contaFechadas :: GBoard -> Int
+contaFechadas [] = 0
+contaFechadas (x:xs) = 0 + contaArray x + contaFechadas xs
+    where
+        contaArray :: [Char] -> Int
+        contaArray [] = 0
+        contaArray (x:xs)
+            | x == '-' = 1 + contaArray xs
+            | otherwise = contaArray xs
 
 -- contaMinas: Recebe o tabuleiro de Minas (MBoard) e conta quantas minas existem no jogo
 
---contaMinas :: MBoard -> Int
+contaMinas :: MBoard -> Int
+contaMinas [] = 0
+contaMinas (x:xs) = 0 + contaArray x + contaMinas xs
+    where
+        contaArray :: [Bool] -> Int
+        contaArray [] = 0
+        contaArray (x:xs)
+            | x == True = 1 + contaArray xs
+            | otherwise = contaArray xs
 
 -- endGame: recebe o tabuleiro de minas, o tauleiro do jogo, e diz se o jogo acabou.
 -- O jogo acabou quando o número de casas fechadas é igual ao numero de minas
 
--- endGame :: MBoard -> GBoard -> Bool
+endGame :: MBoard -> GBoard -> Bool
+endGame mBoard gBoard = contaMinas mBoard == (contaFechadas gBoard)
 
 ---
 ---  PARTE 3: FUNÇÕES PARA GERAR TABULEIROS E IMPRIMIR TABULEIROS
@@ -228,10 +253,10 @@ geraMapaDeMinasZerado t = geraLista t (geraLista t (False))
 -- A função a seguir (main) deve ser substituida pela função main comentada mais
 -- abaixo quando o jogo estiver pronto
 
-main :: IO ()
+{-main :: IO ()
 main = print "Alo Mundo!"
+-}
 
-{-
 
 -- Aqui está o Motor do Jogo.
 -- Essa parte deve ser descomentada quando as outras funções estiverem implementadas
@@ -286,4 +311,3 @@ addMines n size b = do
                       True -> addMines n size b
                       False -> addMines (n-1) size (uPos l c True b)
 
--}
