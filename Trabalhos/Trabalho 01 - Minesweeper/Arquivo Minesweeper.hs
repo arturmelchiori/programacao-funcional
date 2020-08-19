@@ -16,9 +16,6 @@ type GBoard = [[Char]]
 -- Tabuleiro que contem a posicao das minas (Mapa de Minas). True = mina, False = sem mina:
 type MBoard = [[Bool]]
 
-
-
-
 -- Exemplo de Tabuleiro 9x9 inicial todo fechado:
 gBoard :: GBoard
 gBoard = [['-','-','-','-','-','-','-','-','-'],
@@ -43,6 +40,26 @@ mBoard = [[False, False, False, False, False, False, False, False, False],
           [False, False, False, False, False, False, False, False, False],
           [False, False, False, False, False, False, False, False, False],
           [False, False, False, False, False, False, False, False, False]]
+
+-- Funções auxiliares 
+
+tamLista :: [t] -> Int
+tamLista [] = 0
+tamLista (x:xs) = 1 + tamLista xs 
+
+addEspaco :: String -> String
+addEspaco [] = []
+addEspaco [x] = [x]
+addEspaco (x:xs) = x : ' ' : addEspaco xs 
+
+genAllCoord :: Int -> Int -> [[t]] -> [(Int,Int)]
+genAllCoord i c board
+    | (i < tamLista board) = genArrayCoord i c board ++ genAllCoord (i+1) c board
+    | otherwise = []
+genArrayCoord :: Int -> Int -> [[t]] -> [(Int,Int)]
+genArrayCoord row i board
+    | (i < tamLista board) = (row, i) : (genArrayCoord row (i + 1) board)
+    | otherwise = []
 
 
 -- PRIMEIRA PARTE - FUNÇÕES PARA MANIPULAR OS TABULEIROS DO JOGO (MATRIZES)
@@ -114,7 +131,7 @@ isValidPos t l c = (l < t && l >= 0) && (c < t && c >= 0)
 
 validMoves :: Int -> Int -> Int -> [(Int,Int)]
 validMoves t l c
-    | (isValidPos t l c == False) = error "Posição Inválida"
+    | not (isValidPos t l c) = error "Posição Inválida"
     | otherwise = validate t (genSurr l c)
     
     where
@@ -124,24 +141,20 @@ validMoves t l c
         validate :: Int -> [(Int, Int)] -> [(Int, Int)]
         validate t [] = []
         validate t ((a,b):xs)
-            | (isValidPos t a b == True) = (a, b) : validate t xs
+            | (isValidPos t a b) = (a, b) : validate t xs
             | otherwise = validate t xs
             
 -- cMinas: recebe uma posicao  (linha e coluna), o tabuleiro com o mapa das minas, e conta quantas minas
 -- existem nas posições adjacentes
 
-size :: [t] -> Int
-size [] = 0
-size (x:xs) = 1 + size xs 
-
 cMinas :: Int -> Int -> MBoard -> Int
-cMinas l c b = count b (validMoves (size b)  l c)
+cMinas l c b = count b (validMoves (tamLista b)  l c)
     
     where
         count ::  MBoard -> [(Int, Int)] -> Int
         count b [] = 0 
         count b ((x,y):xs)
-            | isMine x y b = 1 + count b xs
+            | (isMine x y b) = 1 + count b xs
             | otherwise = count b xs
             
 ---
@@ -160,10 +173,10 @@ cMinas l c b = count b (validMoves (size b)  l c)
 
 abreJogada :: Int -> Int -> MBoard -> GBoard -> GBoard
 abreJogada l c mBoard gBoard
-    | (isMine l c mBoard == True) = gBoard
+    | (isMine l c mBoard) = gBoard
     | (gPos l c gBoard /= '-') = gBoard
     | (cMinas l c mBoard > 0) = uPos l c (intToDigit (cMinas l c mBoard)) gBoard
-    | otherwise = abreJogadaNext (validMoves (size mBoard) l c) mBoard (uPos l c (intToDigit 0) gBoard)
+    | otherwise = abreJogadaNext (validMoves (tamLista mBoard) l c) mBoard (uPos l c (intToDigit 0) gBoard)
     
     where
         abreJogadaNext :: [(Int, Int)] -> MBoard -> GBoard -> GBoard
@@ -176,16 +189,19 @@ abreJogada l c mBoard gBoard
 --- todo o tabuleiro no caso de vitória ou derrota 
 
 abreTabuleiro :: MBoard -> GBoard -> GBoard
-abreTabuleiro mBoard gBoard = abreJogada ((\(a,b) -> a) ((\(x:xs) -> x) (genAllCoord 0 0 mBoard))) ((\(a,b) -> b) ((\(x:xs) -> x) (genAllCoord 0 0 mBoard))) mBoard gBoard
-    where
-        genAllCoord :: Int -> Int -> [[t]] -> [(Int,Int)]
-        genAllCoord i c board
-            | i < size board = genArrayCoord i c board ++ genAllCoord (i+1) c board
-            | otherwise = []
-        genArrayCoord :: Int -> Int -> [[t]] -> [(Int,Int)]
-        genArrayCoord row i board
-            | i < size board = (row, i) : (genArrayCoord row (i + 1) board)
-            | otherwise = []
+abreTabuleiro [] [] = gBoard
+abreTabuleiro mBoard gBoard = revealAllCoord (genAllCoord 0 0 mBoard) mBoard gBoard
+     
+    where 
+        revealAllCoord :: [(Int, Int)] -> MBoard -> GBoard -> GBoard
+        revealAllCoord [] mBoard gBoard = gBoard
+        revealAllCoord ((l, c):xs) mBoard gBoard
+            | (gPos l c gBoard /= '-') = revealAllCoord xs mBoard gBoard
+            | ((gPos l c gBoard == '-') && (gPos l c mBoard == True)) = revealAllCoord xs mBoard (uPos l c ('*') gBoard)
+            | ((gPos l c gBoard == '-') && (gPos l c mBoard == False)) = revealAllCoord xs mBoard (abreJogada l c mBoard gBoard)
+            | otherwise = revealAllCoord xs mBoard gBoard
+            -- Até o momento, imprimindo todas as bombas ao terminar. Falta imprimir o resto dos números
+
 
 -- contaFechadas: Recebe um GBoard e conta quantas posições fechadas existem no tabuleiro (posições com '-')
 
@@ -196,7 +212,7 @@ contaFechadas (x:xs) = 0 + contaArray x + contaFechadas xs
         contaArray :: [Char] -> Int
         contaArray [] = 0
         contaArray (x:xs)
-            | x == '-' = 1 + contaArray xs
+            | (x == '-') = 1 + contaArray xs
             | otherwise = contaArray xs
 
 -- contaMinas: Recebe o tabuleiro de Minas (MBoard) e conta quantas minas existem no jogo
@@ -208,7 +224,7 @@ contaMinas (x:xs) = 0 + contaArray x + contaMinas xs
         contaArray :: [Bool] -> Int
         contaArray [] = 0
         contaArray (x:xs)
-            | x == True = 1 + contaArray xs
+            | (x == True) = 1 + contaArray xs
             | otherwise = contaArray xs
 
 -- endGame: recebe o tabuleiro de minas, o tauleiro do jogo, e diz se o jogo acabou.
@@ -224,13 +240,36 @@ endGame mBoard gBoard = contaMinas mBoard == (contaFechadas gBoard)
 -- printBoard: Recebe o tabuleiro do jogo e devolve uma string que é a representação visual desse tabuleiro
 -- Usar como referncia de implementacao o video sobre tabela de vendas (Aula 06)
 
+{-Obs.: Ao imprimir o tabuleiro o jogo, estava sendo impresso tudo com aspas ao redor, por exemplo:
+ 
+   "01234"
+ 0 "-----"
+ 1 "-----"
+ 2 "-----"
+ 3 "-----"
+ 4 "-----"
+
+ Para uma impressão mais "limpa", sem as aspas, pesquisei qual função faria isso, mesmo sem ainda ter sido
+ ensinado e achei a função id para uma impressão como o exemplo a seguir:
+ 
+   01234
+ 0 -----
+ 1 -----
+ 2 -----
+ 3 -----
+ 4 -----
+-}
+
 printBoard :: GBoard -> String
 printBoard [] = []
-printBoard (x:xs) = show x ++ "\n" ++ printBoard xs
-
-printBoard2 :: MBoard -> String
-printBoard2 [] = []
-printBoard2 (x:xs) = show x ++ "\n" ++ printBoard2 xs
+printBoard gBoard = "  " ++ id (reverse (cabecalho ((tamLista gBoard)-1))) ++ "\n" ++ board 0 gBoard
+    where
+        cabecalho :: Int -> String
+        cabecalho 0 = show 0
+        cabecalho i = show i ++ " " ++ cabecalho (i-1)
+        board :: Int -> GBoard -> String
+        board i [] = []
+        board i (x:xs) = show (i) ++ " " ++ id (addEspaco x) ++ "\n" ++ board (i+1) xs
 
 -- geraLista: recebe um inteiro n, um valor v, e gera uma lista contendo n vezes o valor v
 
