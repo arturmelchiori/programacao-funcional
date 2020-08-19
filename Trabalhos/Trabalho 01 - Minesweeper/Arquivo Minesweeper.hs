@@ -49,16 +49,16 @@ tamLista (x:xs) = 1 + tamLista xs
 
 addEspaco :: String -> String
 addEspaco [] = []
-addEspaco [x] = [x]
 addEspaco (x:xs) = x : ' ' : addEspaco xs 
+
+genArrayCoord :: Int -> Int -> [[t]] -> [(Int,Int)]
+genArrayCoord row i board
+    | (i < tamLista board) = (row, i) : (genArrayCoord row (i + 1) board)
+    | otherwise = []
 
 genAllCoord :: Int -> Int -> [[t]] -> [(Int,Int)]
 genAllCoord i c board
     | (i < tamLista board) = genArrayCoord i c board ++ genAllCoord (i+1) c board
-    | otherwise = []
-genArrayCoord :: Int -> Int -> [[t]] -> [(Int,Int)]
-genArrayCoord row i board
-    | (i < tamLista board) = (row, i) : (genArrayCoord row (i + 1) board)
     | otherwise = []
 
 
@@ -198,10 +198,7 @@ abreTabuleiro mBoard gBoard = revealAllCoord (genAllCoord 0 0 mBoard) mBoard gBo
         revealAllCoord ((l, c):xs) mBoard gBoard
             | (gPos l c gBoard /= '-') = revealAllCoord xs mBoard gBoard
             | ((gPos l c gBoard == '-') && (gPos l c mBoard == True)) = revealAllCoord xs mBoard (uPos l c ('*') gBoard)
-            | ((gPos l c gBoard == '-') && (gPos l c mBoard == False)) = revealAllCoord xs mBoard (abreJogada l c mBoard gBoard)
-            | otherwise = revealAllCoord xs mBoard gBoard
-            -- Até o momento, imprimindo todas as bombas ao terminar. Falta imprimir o resto dos números
-
+            | otherwise = revealAllCoord xs mBoard (abreJogada l c mBoard gBoard)
 
 -- contaFechadas: Recebe um GBoard e conta quantas posições fechadas existem no tabuleiro (posições com '-')
 
@@ -262,14 +259,16 @@ endGame mBoard gBoard = contaMinas mBoard == (contaFechadas gBoard)
 
 printBoard :: GBoard -> String
 printBoard [] = []
-printBoard gBoard = "  " ++ id (reverse (cabecalho ((tamLista gBoard)-1))) ++ "\n" ++ board 0 gBoard
+printBoard gBoard = "   " ++ id (cabecalho ((tamLista gBoard)-1)) ++ "\n" ++ board 0 gBoard
     where
         cabecalho :: Int -> String
         cabecalho 0 = show 0
-        cabecalho i = show i ++ " " ++ cabecalho (i-1)
+        cabecalho i = cabecalho (i-1) ++ " " ++ show i
         board :: Int -> GBoard -> String
         board i [] = []
-        board i (x:xs) = show (i) ++ " " ++ id (addEspaco x) ++ "\n" ++ board (i+1) xs
+        board i (x:xs)
+            | i >= 10 = show (i) ++ " " ++ id (addEspaco x) ++ "\n" ++ board (i+1) xs
+            | otherwise = " " ++ show (i) ++ " " ++ id (addEspaco x) ++ "\n" ++ board (i+1) xs
 
 -- geraLista: recebe um inteiro n, um valor v, e gera uma lista contendo n vezes o valor v
 
