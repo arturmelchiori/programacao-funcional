@@ -25,14 +25,9 @@ vendas 3 = 7
 vendas 4 = 9
 vendas _ = 10
 
--- testes usados foram na seguinte forma:
--- vendaTotal vendaSemanal 10
 vendaTotal :: (Int -> Int) -> Int -> Int
-vendaTotal f 0 = vendaSemanal 0
+vendaTotal f 0 = vendas 0
 vendaTotal f x = f x + vendaTotal f (x-1)
-
-vendaSemanal :: Int -> Int
-vendaSemanal x = vendas x
 
 -- Exercício 3 --------------------------------------------------------
 foldInt :: (Int -> Int -> Int) -> [Int] -> Int
@@ -49,7 +44,7 @@ mult x y = x * y
 -- Exercício 4 --------------------------------------------------------
 filterString :: (Char -> Bool) -> [Char] -> [Char]
 filterString f [] = []
-filterString f (x:xs) 
+filterString f (x:xs)
     | (f x == False) = filterString f xs
     | otherwise = x : filterString f xs
 
