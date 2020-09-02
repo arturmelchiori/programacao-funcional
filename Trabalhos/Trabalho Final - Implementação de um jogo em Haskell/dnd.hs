@@ -7,7 +7,11 @@ import Data.Char
 import System.IO
 import System.Random
 
-data Personagem = Personagem 
+-----------------------------------------------------------------------
+--------------- Estuturas e conteúdo pré definidos --------------------
+-----------------------------------------------------------------------
+
+data Personagem = Personagem
     { pNome   :: String
     , pRaca   :: String
     , pClasse :: String
@@ -16,47 +20,91 @@ data Personagem = Personagem
     , pCA     :: Int
     , pStr    :: Int -- Força
     , pDex    :: Int -- Destreza
-    , pCons   :: Int -- Constituição
+    , pCon    :: Int -- Constituição
     , pInt    :: Int -- Inteligência
-    , pWis    :: Int -- Sabedoria
-    , pChar   :: Int -- Carisma
     , pInit   :: Int -- Iniciativa
-    , pSpells :: [Char] -- Magias
-    , pItems  :: [Char] -- Itens equipados
-    } deriving (Show)
+    , pItems  :: [String] -- Lista de itens equipados
+    } deriving (Eq,Show)
 
-data NPC = NPC 
+data Raca = Raca
+    { rNome  :: String
+    , rStr   :: Int
+    , rDex   :: Int
+    , rCon  :: Int
+    , rInt   :: Int
+    } deriving (Eq,Show)
+
+data Classe = Classe
+    { cNome  :: String
+    , cHPMax :: Int
+    , cHP    :: Int
+    , cCA    :: Int
+    , cStr   :: Int
+    , cDex   :: Int
+    , cCon   :: Int
+    , cInt   :: Int
+    , cDmg   :: Int
+    } deriving (Eq,Show)
+
+data NPC = NPC
     { npcNome  :: String
     , npcHPMax :: Int -- Máximo de pontos de vida
-    , npcHP    :: Int -- Pontos de vida atual 
+    , npcHP    :: Int -- Pontos de vida atual
     , npcCA    :: Int -- Classe de armadura
-    , npcDmg1  :: Int -- Dado de dano do ataque primário do NPC
-    , npcDmg2  :: Int -- Dado de dano do ataque secundário do NPC
-    } deriving (Show)
+    , npcDmg  :: Int -- Dado de dano do ataque do NPC
+    } deriving (Eq,Show)
+
+data Item = Item
+    { iNome :: String
+    , iStr  :: Int
+    , iDex  :: Int
+    , iCon  :: Int
+    , iInt  :: Int
+    } Deriving (Eq,Show)
+
+-- Raças e Classes a serem utilizadas no jogo
+
+humano :: Raca
+humano = Raca "Humano" 1 1 1 1
+
+elfo :: Raca
+elfo = Raca "Elfo" 0 2 0 2
+
+anao :: Raca
+anao = Raca "Anao" 2 0 2 0
+
+guerreiro :: Classe
+guerreiro = Classe "Guereiro" 12 12 16 15 11 14 8 6
+
+ladino :: Classe
+ladino = Classe "Ladino" 10 10 14 11 15 12 10 4
+
+mago :: Classe
+mago = Classe "Mago" 8 8 14 8 12 12 15 8
 
 -- Lista de NPCs criados previamente para o jogo
 goblin :: NPC
-goblin = NPC "Goblin" 11 11 13 4 0
+goblin = NPC "Goblin" 11 11 13 4
 
 hobgoblin :: NPC
-hobgoblin = NPC "Hobgoblin" 16 16 17 6 0
+hobgoblin = NPC "Hobgoblin" 16 16 17 6
 
 orc :: NPC
-orc = NPC "Orc" 20 20 17 6 0
+orc = NPC "Orc" 20 20 17 6
 
 {- modifier recebe um valor de habilidade e retorna o modificador referente ao valor passado.
 Modificadores são valores a serem adicionados às rolagens de dados para aumentar/diminuir as chances de
-sucesso, baseado na habilidade reference à ação a ser realizada. 
+sucesso, baseado na habilidade reference à ação a ser realizada.
 
 Exemplo:
 O jogador deseja fazer um teste de subterfúgio para passar pelos inimigos despercebido. Caso ele possua
-15 de Destreza (habilidade utilizada para subterfúgio), será adicionado +2 no resultado de sua rolagem, 
+15 de Destreza (habilidade utilizada para subterfúgio), será adicionado +2 no resultado de sua rolagem,
 tendo em vista que o modificador para o valor 15 de habilidade é +2.
 -}
 modifier :: Int -> Int
-modifier hab = 
-    case hab of 
-        1  -> -5 
+modifier hab =
+    case hab of
+        1  -> -5
         2  -> -4
         3  -> -4
         4  -> -3
@@ -87,10 +135,13 @@ modifier hab =
         29 -> 9
         30 -> 10
 
+-----------------------------------------------------------------------
+------------------------------- Funções -------------------------------
+-----------------------------------------------------------------------
 
-{- rollDie recebe o número e lados do dado a ser rolado e uma dificuldade da ação a ser realizada, e então
-compara se a rolagem resultou em um sucesso, caso a rolagem seja maior que a dificuldade, ou falha, caso
-a rolagem seja menor que a dificuldade.
+{- rollDie recebe o número e lados do dado a ser rolado e uma dificuldade da ação
+a ser realizada, e então compara se a rolagem resultou em um sucesso, caso a rolagem
+seja maior que a dificuldade, ou falha, caso a rolagem seja menor que a dificuldade.
 -}
 rollDie :: Int -> Int -> IO (Bool, Int)
 rollDie nSides difficulty = do
@@ -104,43 +155,36 @@ printRollResults :: (Int,Int) -> IO ()
 printRollResults (roll, diff) = do
     (bool, n) <- rollDie roll diff
     case (bool, n) of
-        (True, 20) -> putStrLn ("Acerto crítico, rolando um 20!")
+        (True, 20) -> putStrLn ("Acerto critico, rolando um 20!")
         (True, _)  -> putStrLn ("Sucesso, rolando um " ++ show n ++ ".")
-        (False, 1) -> putStrLn ("Falha crítica, rolando um 1!")
+        (False, 1) -> putStrLn ("Falha critica, rolando um 1!")
         (False, _) -> putStrLn ("Falha, rolando um " ++ show n ++ ".")
 
-{- Humano: +1 para todos os valores de habilidade
-   Elfo: +2 para Dex, +1 para Int
-   Anão: +2 para Força, +1 para Cons
-
-   Guerreiro: Str 15, Dex 13, Cons 14, Int 8, Wis 12, Char 10
-   Ladino: Str 8, Dex 15, Cons 13, Int 10, Wis 12, Char 14
-   Mago: Str 8, Dex 10, Cons 12, Int 15, Wis 14, Char 13
--}
 createCharacter :: IO Personagem
 createCharacter = do
     putStr "Qual o nome do seu personagem? "
     nome <- getLine
-    putStr "Qual a raça do seu personagem (humano, elfo ou anão)? "
+    putStr "Qual a raça do seu personagem (humano, elfo ou anao)? "
     raca <- getLine
     putStr "Qual a classe do seu personagem (guerreiro, ladino ou mago)? "
     classe <- getLine
     case (map toLower raca, map toLower classe) of
-        ("humano", "guerreiro") -> return (Personagem nome raca classe 12 12 15 16 14 15 9 13 11 2 [] [])
-        ("elfo", "guerreiro")   -> return (Personagem nome raca classe 12 12 15 15 15 14 9 12 10 2  [] [])
-        ("anão", "guerreiro")   -> return (Personagem nome raca classe 12 12 15 17 13 15 8 12 10 1 [] [])
-        ("humano", "ladino")    -> return (Personagem nome raca classe 10 10 15 9 16 14 11 13 15 3 [] [])
-        ("elfo", "ladino")      -> return (Personagem nome raca classe 10 10 15 8 17 13 11 12 14 2 [] [])
-        ("anão", "ladino")      -> return (Personagem nome raca classe 10 10 15 10 15 14 10 12 14 2 [] [])
-        ("humano", "mago")      -> return (Personagem nome raca classe 8 8 15 9 11 13 16 15 14 0 [] [])
-        ("elfo", "mago")        -> return (Personagem nome raca classe 8 8 15 8 12 12 16 14 13 1 [] [])
-        ("anão", "mago")        -> return (Personagem nome raca classe 8 8 15 10 10 13 15 14 13 0 [] [])
-        (_, _)                  -> return (Personagem nome raca classe 0 0 0 0 0 0 0 0 0 0 [] [])
+        ("humano", "guerreiro") -> return (Personagem nome (rNome humano) (cNome guerreiro) (cHPMax guerreiro) (cHP guerreiro) (cCA guerreiro) (cStr guerreiro) (cDex guerreiro) (cCon guerreiro) (cInt guerreiro) (cDmg guerreiro))
+        ("elfo", "guerreiro")   -> return (Personagem nome (rNome elfo) (cNome guerreiro) (cHPMax guerreiro) (cHP guerreiro) (cCA guerreiro) (cStr guerreiro) (cDex guerreiro) (cCon guerreiro) (cInt guerreiro) (cDmg guerreiro))
+        ("anao", "guerreiro")   -> return (Personagem nome (rNome anao) (cNome guerreiro) (cHPMax guerreiro) (cHP guerreiro) (cCA guerreiro) (cStr guerreiro) (cDex guerreiro) (cCon guerreiro) (cInt guerreiro) (cDmg guerreiro))
+        ("humano", "ladino")    -> return (Personagem nome (rNome humano) (cNome ladino) (cHPMax ladino) (cHP ladino) (cCA ladino) (cStr ladino) (cDex ladino) (cCon ladino) (cInt ladino) (cDmg ladino))
+        ("elfo", "ladino")      -> return (Personagem nome (rNome elfo) (cNome ladino) (cHPMax ladino) (cHP ladino) (cCA ladino) (cStr ladino) (cDex ladino) (cCon ladino) (cInt ladino) (cDmg ladino))
+        ("anao", "ladino")      -> return (Personagem nome (rNome anao) (cNome ladino) (cHPMax ladino) (cHP ladino) (cCA ladino) (cStr ladino) (cDex ladino) (cCon ladino) (cInt ladino) (cDmg ladino))
+        ("humano", "mago")      -> return (Personagem nome (rNome humano) (cNome mago) (cHPMax mago) (cHP mago) (cCA mago) (cStr mago) (cDex mago) (cCon mago) (cInt mago) (cDmg mago))
+        ("elfo", "mago")        -> return (Personagem nome (rNome elfo) (cNome mago) (cHPMax mago) (cHP mago) (cCA mago) (cStr mago) (cDex mago) (cCon mago) (cInt mago) (cDmg mago))
+        ("anao", "mago")        -> return (Personagem nome (rNome anao) (cNome mago) (cHPMax mago) (cHP mago) (cCA mago) (cStr mago) (cDex mago) (cCon mago) (cInt mago) (cDmg mago))
+        (_, _)                  -> error "Entrada invalida."
 
-
-
+-----------------------------------------------------------------------
+--------------------------------- Jogo --------------------------------
+-----------------------------------------------------------------------
 
 main :: IO ()
 main = do
     personagem <- createCharacter
-    putStrLn (show personagem)        
+    putStrLn (show personagem)
