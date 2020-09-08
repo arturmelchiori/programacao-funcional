@@ -6,6 +6,7 @@
 import Data.Char
 import System.IO
 import System.Random
+import System.Console.ANSI
 
 -----------------------------------------------------------------------
 --------------- Estuturas e conteúdo pré definidos --------------------
@@ -22,7 +23,7 @@ data Personagem = Personagem
     , pDex    :: Int -- Destreza
     , pCon    :: Int -- Constituição
     , pInt    :: Int -- Inteligência
-    , pInit   :: Int -- Iniciativa
+    , pDmg    :: Int -- Dado de dano
     , pItems  :: [String] -- Lista de itens equipados
     } deriving (Eq,Show)
 
@@ -56,10 +57,12 @@ data NPC = NPC
 
 data Item = Item
     { iNome :: String
+    , iCA   :: Int
     , iStr  :: Int
     , iDex  :: Int
     , iCon  :: Int
     , iInt  :: Int
+    , iDmg  :: Int
     } deriving (Eq,Show)
 
 -- Raças e Classes a serem utilizadas no jogo
@@ -91,6 +94,10 @@ hobgoblin = NPC "Hobgoblin" 16 16 17 6
 
 orc :: NPC
 orc = NPC "Orc" 20 20 17 6
+
+-- Itens pré-definidos
+escudo :: Item
+escudo = Item "Escudo" 1 0 0 0 0 0
 
 {- modifier recebe um valor de habilidade e retorna o modificador referente ao valor passado.
 Modificadores são valores a serem adicionados às rolagens de dados para aumentar/diminuir as chances de
@@ -160,13 +167,15 @@ printRollResults (roll, diff) = do
         (False, 1) -> putStrLn ("Falha critica, rolando um 1!")
         (False, _) -> putStrLn ("Falha, rolando um " ++ show n ++ ".")
 
-{- rollDie recebe o número e lados do dado a ser rolado e uma dificuldade da ação
-a ser realizada, e então compara se a rolagem resultou em um sucesso, caso a rolagem
-seja maior que a dificuldade, ou falha, caso a rolagem seja menor que a dificuldade.
--}
 createCharacter :: IO Personagem
 createCharacter = do
-    putStr "Preencha os dados do seu personagem abaixo \n"
+    putStr "Para informações sobre raças, classes, funcionamento e exemplos  \n\
+           \de ações/escolhas, por favor consulte o manual do jogador (PDF de\n\
+           \especificação do trabalho).                                    \n\n\
+
+           \---------------------------------------------- \n\
+           \| Preencha os dados do seu personagem abaixo | \n\
+           \---------------------------------------------- \n\n"
     putStr "Nome: "
     nome <- getLine
     putStr "Raça (humano, elfo ou anao): "
@@ -203,22 +212,36 @@ createCharacter = do
                                                            ((cInt mago) + (rInt anao)) (cDmg mago) [])
         (_, _)                  -> error "Entrada invalida."
 
+equipItem :: Item -> Personagem -> IO Personagem
+equipItem item char = return (Personagem (pNome char) (pRaca char) (pClasse char) (pHPMax char) (pHP char) ((pCA char) + (iCA item))
+                                         ((pStr char) + (iStr item)) ((pDex char) + (iDex item)) ((pCon char) + (iCon item))
+                                         ((pInt char) + (iInt item)) ((pDmg char) + (iDmg item)) ((iNome item) : (pItems char)))
+
+dmgPlayer :: Int -> Personagem -> IO Personagem
+dmgPlayer dmg char = return (Personagem (pNome char) (pRaca char) (pClasse char) (pHPMax char) ((pHP char) - dmg) (pCA char)
+                                   (pStr char) (pDex char) (pCon char) (pInt char) (pDmg char) (pItems char))
+
+dmgNPC :: Int -> NPC -> IO NPC
+dmgNPC dmg npc = return (NPC (npcNome npc) (npcHPMax npc) ((npcHP npc) - dmg) (npcCA npc) (npcDmg npc))
+
 -----------------------------------------------------------------------
 --------------------------------- Jogo --------------------------------
 -----------------------------------------------------------------------
 
 main :: IO ()
 main = do
-    putStrLn "  __     ___      _               _                 \n\
-              \  \\ \\   / (_)_ __| |_ _   _  __ _| |             \n\
-              \   \\ \\ / /| | '__| __| | | |/ _` | |             \n\
-              \    \\ V / | | |  | |_| |_| | (_| | |              \n\
-              \     \\_/__|_|_| _ \\__|\\__,_|\\__,_|_|           \n\
-              \       |_   _|_ _| |__ | | ___| |_ ___  _ __       \n\
-              \         | |/ _` | '_ \\| |/ _ \\ __/ _ \\| '_ \\  \n\
-              \         | | (_| | |_) | |  __/ || (_) | |_) |     \n\
-              \         |_|\\__,_|_.__/|_|\\___|\\__\\___/| .__/  \n\
-              \                                       |_|         \n\
+    clearScreen
+    putStrLn "Olá, aventureiro. Bem vindo à demo de"
+    putStrLn "      __     ___      _               _                 \n\
+              \      \\ \\   / (_)_ __| |_ _   _  __ _| |             \n\
+              \       \\ \\ / /| | '__| __| | | |/ _` | |             \n\
+              \        \\ V / | | |  | |_| |_| | (_| | |              \n\
+              \         \\_/__|_|_| _ \\__|\\__,_|\\__,_|_|           \n\
+              \           |_   _|_ _| |__ | | ___| |_ ___  _ __       \n\
+              \             | |/ _` | '_ \\| |/ _ \\ __/ _ \\| '_ \\  \n\
+              \             | | (_| | |_) | |  __/ || (_) | |_) |     \n\
+              \             |_|\\__,_|_.__/|_|\\___|\\__\\___/| .__/  \n\
+              \                                           |_|     \n\
               \"
 
     personagem <- createCharacter
