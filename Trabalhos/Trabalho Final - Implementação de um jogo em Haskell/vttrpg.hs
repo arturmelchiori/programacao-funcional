@@ -8,9 +8,6 @@ import System.IO
 import System.Random
 import System.Console.ANSI
 
------------------------------------------------------------------------
---------------- Estuturas e conteúdo pré definidos --------------------
------------------------------------------------------------------------
 
 data Personagem = Personagem
     { pNome   :: String
@@ -65,7 +62,7 @@ data Item = Item
     , iDmg  :: Int
     } deriving (Eq,Show)
 
--- Raças e Classes a serem utilizadas no jogo
+-- Raças e Classes pré deifinidos
 
 humano :: Raca
 humano = Raca "Humano" 1 1 1 1
@@ -86,6 +83,7 @@ mago :: Classe
 mago = Classe "Mago" 8 8 14 8 12 12 15 8
 
 -- Lista de NPCs criados previamente para o jogo
+
 goblin :: NPC
 goblin = NPC "Goblin" 11 11 13 4
 
@@ -96,6 +94,7 @@ orc :: NPC
 orc = NPC "Orc" 20 20 17 6
 
 -- Itens pré-definidos
+
 escudo :: Item
 escudo = Item "Escudo" 1 0 0 0 0 0
 
@@ -167,7 +166,10 @@ rollPlusModifier char = do
         "Mago"      -> return (roll + modifier (pInt char))
         _           -> return 0
 
-
+{- rollDieResults e printRollResults não seriam usadas propriamente durante a
+história. Eu fiz uso delas mais para testes e decidi manter, já que o trabalho
+não foi finalizado.
+-}
 rollDieResults :: Int -> Int -> IO (Bool, Int)
 rollDieResults nSides difficulty = do
      roll <- randomRIO(1,nSides :: Int)
@@ -230,6 +232,8 @@ createCharacter = do
                                                            ((cInt mago) + (rInt anao)) (cDmg mago) [])
         (_, _)                  -> error "Entrada invalida."
 
+
+-- characterCard recebe um personagem e imprime um card com suas informações
 characterCard :: Personagem -> [Char]
 characterCard char = "\n|--------------------------------------------|\n\
                       \| Nome: " ++ pNome char ++ " \n\
@@ -247,20 +251,30 @@ characterCard char = "\n|--------------------------------------------|\n\
                       \| Dano: 1d" ++ show (pDmg char) ++ "  \n\
                       \|--------------------------------------------|\n"
 
+{- equiItem recebe um Item a ser "equipado" no personagem, somando os atributos
+do item aos do personagem, assim como adicionando o nome do Item à lista de
+itens equipados.
+-}
 equipItem :: Item -> Personagem -> IO Personagem
 equipItem item char = return (Personagem (pNome char) (pRaca char) (pClasse char) (pHPMax char) (pHP char) ((pCA char) + (iCA item))
                                          ((pStr char) + (iStr item)) ((pDex char) + (iDex item)) ((pCon char) + (iCon item))
                                          ((pInt char) + (iInt item)) ((pDmg char) + (iDmg item)) ((iNome item) : (pItems char)))
 
+{- dmgPlayer e dmgNPC foram criadas para atribuir dano aos Hit Points do
+personagem e inimigos, respectivamente.
+Tentei fazer a implementação chamando diretamente o ia ser modificado, mas não
+consegui botar em prática.
+No terminal é possível, após a criação de um personagem, realizar por exmeplo
+pHP personagem - 5
+para diminuir o HP em 5, mas não era possível (ou não consegui) fazer o mesmo
+dentro de outras funções.
+-}
 dmgPlayer :: Int -> Personagem -> IO Personagem
 dmgPlayer dmg char = return (Personagem (pNome char) (pRaca char) (pClasse char) (pHPMax char) ((pHP char) - dmg) (pCA char)
                                    (pStr char) (pDex char) (pCon char) (pInt char) (pDmg char) (pItems char))
 
 dmgNPC :: Int -> NPC -> IO NPC
 dmgNPC dmg npc = return (NPC (npcNome npc) (npcHPMax npc) ((npcHP npc) - dmg) (npcCA npc) (npcDmg npc))
-
--- combatPlayer1st :: Personagem -> NPC -> Personagem
--- combatPlayer1st = do
 
 -----------------------------------------------------------------------
 ---------------------- Mapas/Escolhas durante o jogo ------------------
