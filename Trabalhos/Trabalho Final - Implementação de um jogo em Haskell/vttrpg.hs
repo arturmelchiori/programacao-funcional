@@ -16,9 +16,9 @@ data Personagem = Personagem
     { pNome   :: String
     , pRaca   :: String
     , pClasse :: String
-    , pHPMax  :: Int
-    , pHP     :: Int
-    , pCA     :: Int
+    , pHPMax  :: Int -- Máximo de Hit Points do personagem
+    , pHP     :: Int -- Hit Points atual do personagem
+    , pCA     :: Int -- Classe de Armadura
     , pStr    :: Int -- Força
     , pDex    :: Int -- Destreza
     , pCon    :: Int -- Constituição
@@ -31,7 +31,7 @@ data Raca = Raca
     { rNome  :: String
     , rStr   :: Int
     , rDex   :: Int
-    , rCon  :: Int
+    , rCon   :: Int
     , rInt   :: Int
     } deriving (Eq,Show)
 
@@ -39,12 +39,12 @@ data Classe = Classe
     { cNome  :: String
     , cHPMax :: Int
     , cHP    :: Int
-    , cCA    :: Int
-    , cStr   :: Int
-    , cDex   :: Int
-    , cCon   :: Int
-    , cInt   :: Int
-    , cDmg   :: Int
+    , cCA    :: Int -- Classe de Armadura
+    , cStr   :: Int -- Força
+    , cDex   :: Int -- Destreza
+    , cCon   :: Int -- Constituição
+    , cInt   :: Int -- Inteligência
+    , cDmg   :: Int -- Dado de dano
     } deriving (Eq,Show)
 
 data NPC = NPC
@@ -52,7 +52,7 @@ data NPC = NPC
     , npcHPMax :: Int -- Máximo de pontos de vida
     , npcHP    :: Int -- Pontos de vida atual
     , npcCA    :: Int -- Classe de armadura
-    , npcDmg  :: Int -- Dado de dano do ataque do NPC
+    , npcDmg   :: Int -- Dado de dano do ataque do NPC
     } deriving (Eq,Show)
 
 data Item = Item
@@ -74,7 +74,7 @@ elfo :: Raca
 elfo = Raca "Elfo" 0 2 0 2
 
 anao :: Raca
-anao = Raca "Anao" 2 0 2 0
+anao = Raca "Anão" 2 0 2 0
 
 guerreiro :: Classe
 guerreiro = Classe "Guerreiro" 12 12 16 15 11 14 8 6
@@ -146,21 +146,39 @@ modifier hab =
 ------------------------------- Funções -------------------------------
 -----------------------------------------------------------------------
 
-{- rollDie recebe o número e lados do dado a ser rolado e uma dificuldade da ação
-a ser realizada, e então compara se a rolagem resultou em um sucesso, caso a rolagem
-seja maior que a dificuldade, ou falha, caso a rolagem seja menor que a dificuldade.
+{- rollDie recebe o número e lados do dado a ser rolado e gera um número
+aleatório como resultado da rolagem
 -}
-rollDie :: Int -> Int -> IO (Bool, Int)
-rollDie nSides difficulty = do
+rollDie :: Int -> IO Int
+rollDie nSides = do
     roll <- randomRIO(1,nSides :: Int)
-    case (roll > difficulty) of
-        True  -> return (True, roll)
-        False -> return (False, roll)
+    return roll
+
+{- rollPlusModifier recebe um personagem, realiza uma rolagem de dados
+e aplica o modificador de habilidade referente à classe do Personagem
+(Força para Guerreiro, Destreza para Ladino e Inteligência para Mago)
+-}
+rollPlusModifier :: Personagem -> IO Int
+rollPlusModifier char = do
+    roll <- rollDie 20
+    case pClasse char of
+        "Guerreiro" -> return (roll + modifier (pStr char))
+        "Ladino"    -> return (roll + modifier (pDex char))
+        "Mago"      -> return (roll + modifier (pInt char))
+        _           -> return 0
+
+
+rollDieResults :: Int -> Int -> IO (Bool, Int)
+rollDieResults nSides difficulty = do
+     roll <- randomRIO(1,nSides :: Int)
+     case (roll > difficulty) of
+         True  -> return (True, roll)
+         False -> return (False, roll)
 
 
 printRollResults :: (Int,Int) -> IO ()
 printRollResults (roll, diff) = do
-    (bool, n) <- rollDie roll diff
+    (bool, n) <- rollDieResults roll diff
     case (bool, n) of
         (True, 20) -> putStrLn ("Acerto critico, rolando um 20!")
         (True, _)  -> putStrLn ("Sucesso, rolando um " ++ show n ++ ".")
@@ -171,7 +189,7 @@ createCharacter :: IO Personagem
 createCharacter = do
     putStr "Para informações sobre raças, classes, funcionamento e exemplos  \n\
            \de ações/escolhas, por favor consulte o manual do jogador (PDF de\n\
-           \especificação do trabalho).                                    \n\n\
+           \descrição do trabalho).                                    \n\n\
 
            \---------------------------------------------- \n\
            \| Preencha os dados do seu personagem abaixo | \n\
@@ -212,6 +230,23 @@ createCharacter = do
                                                            ((cInt mago) + (rInt anao)) (cDmg mago) [])
         (_, _)                  -> error "Entrada invalida."
 
+characterCard :: Personagem -> [Char]
+characterCard char = "\n|--------------------------------------------|\n\
+                      \| Nome: " ++ pNome char ++ " \n\
+                      \| Raça: " ++ pRaca char ++ " \n\
+                      \| Classe: " ++ pClasse char ++ " \n\
+                      \|                            \n\
+                      \| Hit Points: " ++ show (pHP char) ++ "  \n\
+                      \| Classe de Armadura: " ++ show (pCA char) ++ " \n\
+                      \| Itens: " ++ show (pItems char) ++ " \n\
+                      \|                                     \n\
+                      \| Força: " ++ show (pStr char) ++ "  \n\
+                      \| Destreza: " ++ show (pDex char) ++ "  \n\
+                      \| Constituição: " ++ show (pCon char) ++ "  \n\
+                      \| Inteligência: " ++ show (pInt char) ++ "  \n\
+                      \| Dano: 1d" ++ show (pDmg char) ++ "  \n\
+                      \|--------------------------------------------|\n"
+
 equipItem :: Item -> Personagem -> IO Personagem
 equipItem item char = return (Personagem (pNome char) (pRaca char) (pClasse char) (pHPMax char) (pHP char) ((pCA char) + (iCA item))
                                          ((pStr char) + (iStr item)) ((pDex char) + (iDex item)) ((pCon char) + (iCon item))
@@ -224,8 +259,41 @@ dmgPlayer dmg char = return (Personagem (pNome char) (pRaca char) (pClasse char)
 dmgNPC :: Int -> NPC -> IO NPC
 dmgNPC dmg npc = return (NPC (npcNome npc) (npcHPMax npc) ((npcHP npc) - dmg) (npcCA npc) (npcDmg npc))
 
+-- combatPlayer1st :: Personagem -> NPC -> Personagem
+-- combatPlayer1st = do
+
 -----------------------------------------------------------------------
---------------------------------- Jogo --------------------------------
+---------------------- Mapas/Escolhas durante o jogo ------------------
+-----------------------------------------------------------------------
+
+intro :: Personagem -> IO Personagem
+intro char = do
+    putStrLn "Você acorda em uma caverna escura, amarrado por cordas à uma viga\n\
+             \de madeira. Aos poucos, suas memórias retornam; o comboio no qual\n\
+             \você trabalhava como escolta foi atacado por um grupo de orcs. \n\
+             \Subjulgados, vocês foram capturados.\n\
+             \\n\
+             \Aos poucos, tentando se livrar das amarras, as cordas se afrouxam,\n\
+             \permitindo que você se solte. Um orc permanece de guarda na sala.\n\
+             \\n\
+             \Como deseja prosseguir?\n\
+             \1 - Atacar o Orc (Iniciar combate)\n\
+             \2 - Tentar escapar sem que seja notado (Subterfúgio)\n\
+             \Escolha (1 ou 2): "
+    escolha <- getLine
+    if escolha == "1"
+        then do
+            putStr "TRABALHO NÃO FINALIZADO.\n"
+        else if escolha == "2"
+            then do
+                putStr "TRABALHO NÃO FINALIZADO.\n"
+            else do
+                putStr "ENTRADA INVÁLIDA.\n"
+
+    return char
+
+-----------------------------------------------------------------------
+--------------------------------- Main --------------------------------
 -----------------------------------------------------------------------
 
 main :: IO ()
@@ -245,4 +313,14 @@ main = do
               \"
 
     personagem <- createCharacter
-    putStrLn (show personagem)
+    putStrLn "\n**Personagem criado com sucesso**\n"
+    personagem <- dmgPlayer 10 personagem
+    putStrLn (characterCard personagem)
+
+    putStr "Pressione qualquer tecla para iniciar a história..."
+    option <- getChar
+    clearScreen
+
+    intro personagem
+
+    putStr "\n\n**FIM**\n\n"
